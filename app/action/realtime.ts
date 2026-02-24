@@ -16,6 +16,8 @@ export async function fetchRealtimeSubscriptionToken() {
       "generation.start",
       "analysis.start",
       "analysis.complete",
+      "critique.start",
+      "critique.complete",
       "frame.created",
       "generation.complete",
     ],

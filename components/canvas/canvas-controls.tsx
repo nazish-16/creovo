@@ -37,7 +37,7 @@ const CanvasControls = ({
           )}
           onClick={() => setToolMode(TOOL_MODE_ENUM.SELECT)}
         >
-          <MousePointerIcon />
+          <MousePointerIcon className="size-4" />
         </Button>
         <Button
           size="icon-sm"
@@ -48,7 +48,7 @@ const CanvasControls = ({
           )}
           onClick={() => setToolMode(TOOL_MODE_ENUM.HAND)}
         >
-          <HandIcon />
+          <HandIcon className="size-4" />
         </Button>
       </div>
 

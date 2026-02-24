@@ -76,6 +76,7 @@ export async function POST(
           prompt,
           frames: project.frames,
           theme: project.theme,
+          designSystemLocked: project.designSystemLocked,
         },
       });
     } catch (error) {
@@ -102,19 +103,19 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { themeId } = await request.json();
+    const { themeId, designSystemLocked } = await request.json();
     const session = await getKindeServerSession();
     const user = await session.getUser();
 
     if (!user) throw new Error("Unauthorized");
-    if (!themeId) throw new Error("Missing Theme");
 
     const userId = user.id;
 
     const project = await prisma.project.update({
       where: { id, userId },
       data: {
-        theme: themeId,
+        ...(themeId && { theme: themeId }),
+        ...(designSystemLocked !== undefined && { designSystemLocked }),
       },
     });
 
@@ -127,6 +128,48 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: "Failed to update project",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getKindeServerSession();
+    const user = await session.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Manually delete frames first to avoid relation violations
+    await prisma.frame.deleteMany({
+      where: {
+        projectId: id,
+      },
+    });
+
+    await prisma.project.delete({
+      where: {
+        id: id,
+        userId: user.id,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Project deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return NextResponse.json(
+      {
+        error: "Failed to delete project",
       },
       { status: 500 }
     );

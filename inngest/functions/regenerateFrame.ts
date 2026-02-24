@@ -1,6 +1,6 @@
 import { generateText, stepCountIs } from "ai";
 import { inngest } from "../client";
-//import { openrouter } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
 import { GENERATION_SYSTEM_PROMPT } from "@/lib/prompt";
 import prisma from "@/lib/prisma";
 import { BASE_VARIABLES, THEME_LIST } from "@/lib/themes";
@@ -16,6 +16,7 @@ export const regenerateFrame = inngest.createFunction(
       frameId,
       prompt,
       theme: themeId,
+      designSystemLocked,
       frame,
     } = event.data;
     const CHANNEL = `user:${userId}`;
@@ -29,21 +30,19 @@ export const regenerateFrame = inngest.createFunction(
       },
     });
 
-    // Generate new frame with the user's prompt
     await step.run("regenerate-screen", async () => {
       const selectedTheme = THEME_LIST.find((t) => t.id === themeId);
 
-      //Combine the Theme Styles + Base Variable
       const fullThemeCSS = `
         ${BASE_VARIABLES}
         ${selectedTheme?.style || ""}
       `;
 
       const result = await generateText({
-        model: "google/gemini-3-pro-preview",
+        model: openrouter("google/gemini-2.0-flash-001"),
         system: GENERATION_SYSTEM_PROMPT,
         tools: {
-          searchUnsplash: unsplashTool,
+          unsplashTool,
         },
         stopWhen: stepCountIs(5),
         prompt: `
@@ -53,7 +52,7 @@ export const regenerateFrame = inngest.createFunction(
         ORIGINAL SCREEN HTML: ${frame.htmlContent}
 
         THEME VARIABLES (Reference ONLY - already defined in parent, do NOT redeclare these): ${fullThemeCSS}
-
+        ${designSystemLocked ? "STRICT DESIGN SYSTEM LOCK ACTIVE: You MUST use the provided THEME VARIABLES for all colors, spacing, and typography. Do NOT introduce any new colors or utility classes that deviate from the design system. Maintain consistency with existing styles." : ""}
 
         CRITICAL REQUIREMENTS A MUST - READ CAREFULLY:
         1. **PRESERVE the overall structure and layout - ONLY modify what the user explicitly requested**
@@ -120,5 +119,5 @@ export const regenerateFrame = inngest.createFunction(
         projectId: projectId,
       },
     });
-  }
+  },
 );

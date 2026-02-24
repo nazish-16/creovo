@@ -1,7 +1,7 @@
 import { generateObject, generateText, stepCountIs } from "ai";
 import { inngest } from "../client";
 import { z } from "zod";
-//import { openrouter } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
 import { FrameType } from "@/types/project";
 import { ANALYSIS_PROMPT, GENERATION_SYSTEM_PROMPT } from "@/lib/prompt";
 import prisma from "@/lib/prisma";
@@ -12,7 +12,7 @@ const AnalysisSchema = z.object({
   theme: z
     .string()
     .describe(
-      "The specific visual theme ID (e.g., 'midnight', 'ocean-breeze', 'neo-brutalism')."
+      "The specific visual theme ID (e.g., 'midnight', 'ocean-breeze', 'neo-brutalism').",
     ),
   screens: z
     .array(
@@ -20,24 +20,24 @@ const AnalysisSchema = z.object({
         id: z
           .string()
           .describe(
-            "Unique identifier for the screen (e.g., 'home-dashboard', 'profile-settings', 'transaction-history'). Use kebab-case."
+            "Unique identifier for the screen (e.g., 'home-dashboard', 'profile-settings', 'transaction-history'). Use kebab-case.",
           ),
         name: z
           .string()
           .describe(
-            "Short, descriptive name of the screen (e.g., 'Home Dashboard', 'Profile', 'Transaction History')"
+            "Short, descriptive name of the screen (e.g., 'Home Dashboard', 'Profile', 'Transaction History')",
           ),
         purpose: z
           .string()
           .describe(
-            "One clear sentence explaining what this screen accomplishes for the user and its role in the app"
+            "One clear sentence explaining what this screen accomplishes for the user and its role in the app",
           ),
         visualDescription: z
           .string()
           .describe(
-            "A dense, high-fidelity visual directive (like an image generation prompt). Describe the layout, specific data examples (e.g. 'Oct-Mar'), component hierarchy, and physical attributes (e.g. 'Chunky cards', 'Floating header','Floating action button', 'Bottom navigation',Header with user avatar)."
+            "A dense, high-fidelity visual directive (like an image generation prompt). Describe the layout, specific data examples (e.g. 'Oct-Mar'), component hierarchy, and physical attributes (e.g. 'Chunky cards', 'Floating header','Floating action button', 'Bottom navigation',Header with user avatar).",
           ),
-      })
+      }),
     )
     .min(1)
     .max(4),
@@ -51,9 +51,9 @@ export const generateScreens = inngest.createFunction(
       userId,
       projectId,
       prompt,
-
       frames,
       theme: existingTheme,
+      designSystemLocked,
     } = event.data;
     const CHANNEL = `user:${userId}`;
     const isExistingGeneration = Array.isArray(frames) && frames.length > 0;
@@ -80,11 +80,11 @@ export const generateScreens = inngest.createFunction(
 
       const contextHTML = isExistingGeneration
         ? frames
-            .map(
-              (frame: FrameType) =>
-                `<!-- ${frame.title} -->\n${frame.htmlContent}`
-            )
-            .join("\n\n")
+          .map(
+            (frame: FrameType) =>
+              `<!-- ${frame.title} -->\n${frame.htmlContent}`,
+          )
+          .join("\n\n")
         : "";
 
       const analysisPrompt = isExistingGeneration
@@ -94,23 +94,29 @@ export const generateScreens = inngest.createFunction(
 
           EXISTING SCREENS (analyze for consistency navigation, layout, design system etc):
           ${contextHTML}
-
-         CRITICAL REQUIREMENTS A MUST - READ CAREFULLY:
-          - **Analyze the existing screens' layout, navigation patterns, and design system
-          - **Extract the EXACT bottom navigation component structure and styling
-          - **Identify common components (cards, buttons, headers) for reuse
-          - **Maintain the same visual hierarchy and spacing
-          - **Generate new screens that seamlessly blend with existing ones
         `.trim()
         : `
           USER REQUEST: ${prompt}
         `.trim();
 
+      const imageParts = event.data.images?.map((img: string) => ({
+        type: "image",
+        image: img,
+      })) || [];
+
       const { object } = await generateObject({
-        model: "google/gemini-3-pro-preview",
+        model: openrouter("google/gemini-2.0-flash-001"),
         schema: AnalysisSchema,
         system: ANALYSIS_PROMPT,
-        prompt: analysisPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: analysisPrompt },
+              ...imageParts,
+            ],
+          },
+        ],
       });
 
       const themeToUse = isExistingGeneration ? existingTheme : object.theme;
@@ -140,86 +146,61 @@ export const generateScreens = inngest.createFunction(
       return { ...object, themeToUse };
     });
 
-    // Actuall generation of each screens
-    const generatedFrames: typeof frames = isExistingGeneration
-      ? [...frames]
-      : [];
+    const generatedFrames: FrameType[] = isExistingGeneration ? [...frames] : [];
 
     for (let i = 0; i < analysis.screens.length; i++) {
       const screenPlan = analysis.screens[i];
-      const selectedTheme = THEME_LIST.find(
-        (t) => t.id === analysis.themeToUse
-      );
+      const selectedTheme = THEME_LIST.find((t) => t.id === analysis.themeToUse);
+      const fullThemeCSS = `${BASE_VARIABLES}\n${selectedTheme?.style || ""}`;
 
-      //Combine the Theme Styles + Base Variable
-      const fullThemeCSS = `
-        ${BASE_VARIABLES}
-        ${selectedTheme?.style || ""}
-      `;
-
-      // Get all previous existing or generated frames
-      const allPreviousFrames = generatedFrames.slice(0, i);
-      const previousFramesContext = allPreviousFrames
+      const previousFramesContext = generatedFrames
         .map((f: FrameType) => `<!-- ${f.title} -->\n${f.htmlContent}`)
         .join("\n\n");
 
       await step.run(`generated-screen-${i}`, async () => {
+        const genPrompt = `
+            - Screen ${i + 1}/${analysis.screens.length}
+            - Screen ID: ${screenPlan.id}
+            - Screen Name: ${screenPlan.name}
+            - Screen Purpose: ${screenPlan.purpose}
+            VISUAL DESCRIPTION: ${screenPlan.visualDescription}
+            EXISTING SCREENS REFERENCE: ${previousFramesContext || "No previous screens"}
+            THEME VARIABLES: ${fullThemeCSS}
+            ${designSystemLocked ? "STRICT DESIGN SYSTEM LOCK ACTIVE: You MUST use the provided THEME VARIABLES for all colors, spacing, and typography. Do NOT introduce any new colors or utility classes that deviate from the design system." : ""}
+
+          1. **Generate raw HTML using Tailwind CSS.**
+          2. **Use placeholder images:**
+            - Profile: https://avatar.iran.liara.run/public
+            - Banner: https://picsum.photos/seed/${screenPlan.id}/800/400
+          3. **Output raw HTML only, starting with <div>.**
+        `.trim();
+
+        const imageParts = event.data.images?.map((img: string) => ({
+          type: "image",
+          image: img,
+        })) || [];
+
         const result = await generateText({
-          model: "google/gemini-3-pro-preview",
+          model: openrouter("google/gemini-2.0-flash-001"),
           system: GENERATION_SYSTEM_PROMPT,
-          tools: {
-            searchUnsplash: unsplashTool,
-          },
+          tools: { unsplashTool },
           stopWhen: stepCountIs(5),
-          prompt: `
-          - Screen ${i + 1}/${analysis.screens.length}
-          - Screen ID: ${screenPlan.id}
-          - Screen Name: ${screenPlan.name}
-          - Screen Purpose: ${screenPlan.purpose}
-
-          VISUAL DESCRIPTION: ${screenPlan.visualDescription}
-
-          EXISTING SCREENS REFERENCE (Extract and reuse their components):
-          ${previousFramesContext || "No previous screens"}
-
-          THEME VARIABLES (Reference ONLY - already defined in parent, do NOT redeclare these):
-          ${fullThemeCSS}
-
-        CRITICAL REQUIREMENTS A MUST - READ CAREFULLY:
-        - **If previous screens exist, COPY the EXACT bottom navigation component structure and styling - do NOT recreate it
-        - **Extract common components (cards, buttons, headers) and reuse their styling
-        - **Maintain the exact same visual hierarchy, spacing, and color scheme
-        - **This screen should look like it belongs in the same app as the previous screens
-
-        1. **Generate ONLY raw HTML markup for this mobile app screen using Tailwind CSS.**
-          Use Tailwind classes for layout, spacing, typography, shadows, etc.
-          Use theme CSS variables ONLY for color-related properties (bg-[var(--background)], text-[var(--foreground)], border-[var(--border)], ring-[var(--ring)], etc.)
-        2. **All content must be inside a single root <div> that controls the layout.**
-          - No overflow classes on the root.
-          - All scrollable content must be in inner containers with hidden scrollbars: [&::-webkit-scrollbar]:hidden scrollbar-none
-        3. **For absolute overlays (maps, bottom sheets, modals, etc.):**
-          - Use \`relative w-full h-screen\` on the top div of the overlay.
-        4. **For regular content:**
-          - Use \`w-full h-full min-h-screen\` on the top div.
-        5. **Do not use h-screen on inner content unless absolutely required.**
-          - Height must grow with content; content must be fully visible inside an iframe.
-        6. **For z-index layering:**
-          - Ensure absolute elements do not block other content unnecessarily.
-        7. **Output raw HTML only, starting with <div>.**
-          - Do not include markdown, comments, <html>, <body>, or <head>.
-        8. **Hardcode a style only if a theme variable is not needed for that element.**
-        9. **Ensure iframe-friendly rendering:**
-          - All elements must contribute to the final scrollHeight so your parent iframe can correctly resize.
-        Generate the complete, production-ready HTML for this screen now
-      `.trim(),
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: genPrompt },
+                ...imageParts,
+              ],
+            },
+          ],
         });
 
         let finalHtml = result.text ?? "";
         const match = finalHtml.match(/<div[\s\S]*<\/div>/);
         finalHtml = match ? match[0] : finalHtml;
-        finalHtml = finalHtml.replace(/```/g, "");
+        finalHtml = finalHtml.replace(/```(html)?/g, "").replace(/```/g, "").trim();
 
-        //Create the frame
         const frame = await prisma.frame.create({
           data: {
             projectId,
@@ -227,9 +208,6 @@ export const generateScreens = inngest.createFunction(
             htmlContent: finalHtml,
           },
         });
-
-        // Add to generatedFrames for next iteration's context
-        generatedFrames.push(frame);
 
         await publish({
           channel: CHANNEL,
@@ -241,7 +219,7 @@ export const generateScreens = inngest.createFunction(
           },
         });
 
-        return { success: true, frame: frame };
+        generatedFrames.push(frame as any);
       });
     }
 
@@ -253,5 +231,5 @@ export const generateScreens = inngest.createFunction(
         projectId: projectId,
       },
     });
-  }
+  },
 );

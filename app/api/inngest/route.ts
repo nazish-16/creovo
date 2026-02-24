@@ -3,6 +3,9 @@ import { inngest } from "../../../inngest/client";
 import { helloWorld } from "@/inngest/functions/helloWorld";
 import { generateScreens } from "@/inngest/functions/generateScreens";
 import { regenerateFrame } from "@/inngest/functions/regenerateFrame";
+import { analyzeDesign } from "@/inngest/functions/analyzeDesign";
+import { refactorUX } from "@/inngest/functions/refactorUX";
+import { applyCritiqueFix } from "@/inngest/functions/applyCritiqueFix";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -11,5 +14,8 @@ export const { GET, POST, PUT } = serve({
     helloWorld,
     generateScreens,
     regenerateFrame,
+    analyzeDesign,
+    refactorUX,
+    applyCritiqueFix,
   ],
 });

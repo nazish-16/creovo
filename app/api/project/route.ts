@@ -36,16 +36,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, images } = await request.json();
     const session = await getKindeServerSession();
     const user = await session.getUser();
 
     if (!user) throw new Error("Unauthorized");
-    if (!prompt) throw new Error("Missing Prompt");
+    if (!prompt && (!images || images.length === 0)) throw new Error("Missing content");
 
     const userId = user.id;
 
-    const projectName = await generateProjectName(prompt);
+    const projectName = await generateProjectName(prompt || "Design Project");
 
     const project = await prisma.project.create({
       data: {
@@ -62,6 +62,7 @@ export async function POST(request: Request) {
           userId,
           projectId: project.id,
           prompt,
+          images,
         },
       });
     } catch (error) {

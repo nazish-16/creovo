@@ -11,8 +11,6 @@ const Page = () => {
   const id = params.id as string;
 
   const { data: project, isPending } = useGetProjectById(id);
-  // const frames = project?.frames || [];
-  // const themeId = project?.theme || "";
 
   const hasInitialData = project?.frames.length > 0;
 
@@ -31,6 +29,7 @@ const Page = () => {
       <CanvasProvider
         initialFrames={project?.frames}
         initialThemeId={project?.theme}
+        initialDesignSystemLocked={project?.designSystemLocked}
         hasInitialData={hasInitialData}
         projectId={project?.id}
       >

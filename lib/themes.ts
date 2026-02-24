@@ -604,32 +604,149 @@ export const ROSE_GOLD_THEME = `
   --chart-5: #fbbf24;
 `;
 
-export const CYBER_THEME = `
-  --background: #000000;
-  --foreground: #00ff41;
-  --primary: #00ff41;
-  --primary-rgb: 0,255,65;
-  --primary-foreground: #000000;
-  --secondary: #0a0e27;
-  --secondary-foreground: #00ff41;
-  --muted: #1a1a2e;
-  --muted-foreground: #39ff14;
-  --accent: #00d9ff;
-  --accent-foreground: #000000;
-  --destructive: #ff0055;
-  --card: #0a0e27;
-  --card-foreground: #00ff41;
-  --popover: #0a0e27;
-  --popover-foreground: #00ff41;
-  --border: #00ff41;
-  --input: #0a0e27;
-  --ring: #00ff41;
-  --chart-1: #00ff41;
-  --chart-2: #00d9ff;
-  --chart-3: #ff00ff;
-  --chart-4: #39ff14;
-  --chart-5: #ffff00;
+/* --------------------------- NEW PROFESSIONAL THEMES --------------------------- */
+
+export const SLATE_STUDIO_THEME = `
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #334155;
+  --primary-rgb: 51,65,85;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e2e8f0;
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #334155;
+  --radius: 0.75rem;
+  --chart-1: #334155;
+  --chart-2: #0f172a;
+  --chart-3: #64748b;
+  --chart-4: #94a3b8;
+  --chart-5: #e2e8f0;
 `;
+
+export const INK_BLUE_THEME = `
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --card: #0f172a;
+  --card-foreground: #e5e7eb;
+  --popover: #0f172a;
+  --popover-foreground: #e5e7eb;
+  --primary: #60a5fa;
+  --primary-rgb: 96,165,250;
+  --primary-foreground: #0b1220;
+  --secondary: #111c33;
+  --secondary-foreground: #e5e7eb;
+  --muted: #111c33;
+  --muted-foreground: #94a3b8;
+  --accent: #1d2a44;
+  --accent-foreground: #e5e7eb;
+  --destructive: #f87171;
+  --border: #1f2a44;
+  --input: #1f2a44;
+  --ring: #60a5fa;
+  --radius: 0.75rem;
+  --chart-1: #60a5fa;
+  --chart-2: #22d3ee;
+  --chart-3: #a5b4fc;
+  --chart-4: #34d399;
+  --chart-5: #94a3b8;
+`;
+
+export const SANDSTONE_THEME = `
+  --background: #fbfaf7;
+  --foreground: #1f2937;
+  --card: #ffffff;
+  --card-foreground: #1f2937;
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+  --primary: #b45309;
+  --primary-rgb: 180,83,9;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f0e8;
+  --secondary-foreground: #1f2937;
+  --muted: #f5f2ea;
+  --muted-foreground: #6b7280;
+  --accent: #efe7d6;
+  --accent-foreground: #1f2937;
+  --destructive: #dc2626;
+  --border: #eee6d5;
+  --input: #eee6d5;
+  --ring: #b45309;
+  --radius: 0.75rem;
+  --chart-1: #b45309;
+  --chart-2: #d97706;
+  --chart-3: #9ca3af;
+  --chart-4: #a16207;
+  --chart-5: #6b7280;
+`;
+
+export const AURORA_GRAY_THEME = `
+  --background: #f7f7f8;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #16a34a;
+  --primary-rgb: 22,163,74;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #e5e7eb;
+  --accent-foreground: #111827;
+  --destructive: #dc2626;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #16a34a;
+  --radius: 0.75rem;
+  --chart-1: #16a34a;
+  --chart-2: #0ea5e9;
+  --chart-3: #f59e0b;
+  --chart-4: #6366f1;
+  --chart-5: #6b7280;
+`;
+
+export const CHARCOAL_TEAL_THEME = `
+  --background: #0b0f14;
+  --foreground: #e5e7eb;
+  --card: #111827;
+  --card-foreground: #e5e7eb;
+  --popover: #111827;
+  --popover-foreground: #e5e7eb;
+  --primary: #14b8a6;
+  --primary-rgb: 20,184,166;
+  --primary-foreground: #071018;
+  --secondary: #0f172a;
+  --secondary-foreground: #e5e7eb;
+  --muted: #0f172a;
+  --muted-foreground: #94a3b8;
+  --accent: #132235;
+  --accent-foreground: #e5e7eb;
+  --destructive: #f87171;
+  --border: #1f2937;
+  --input: #1f2937;
+  --ring: #14b8a6;
+  --radius: 0.75rem;
+  --chart-1: #14b8a6;
+  --chart-2: #60a5fa;
+  --chart-3: #34d399;
+  --chart-4: #a78bfa;
+  --chart-5: #94a3b8;
+`;
+
+/* ----------------------------------------------------------------------------- */
 
 export const THEME_LIST: ThemeType[] = [
   {
@@ -737,10 +854,31 @@ export const THEME_LIST: ThemeType[] = [
     name: "Rose Gold",
     style: ROSE_GOLD_THEME,
   },
+
   {
-    id: "cyber",
-    name: "Cyber",
-    style: CYBER_THEME,
+    id: "slate-studio",
+    name: "Slate Studio",
+    style: SLATE_STUDIO_THEME,
+  },
+  {
+    id: "ink-blue",
+    name: "Ink Blue",
+    style: INK_BLUE_THEME,
+  },
+  {
+    id: "sandstone",
+    name: "Sandstone",
+    style: SANDSTONE_THEME,
+  },
+  {
+    id: "aurora-gray",
+    name: "Aurora Gray",
+    style: AURORA_GRAY_THEME,
+  },
+  {
+    id: "charcoal-teal",
+    name: "Charcoal Teal",
+    style: CHARCOAL_TEAL_THEME,
   },
 ];
 

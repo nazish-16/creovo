@@ -44,7 +44,6 @@ export async function POST(
       return NextResponse.json({ error: "Frame not found" }, { status: 404 });
     }
 
-    // Trigger inngest function
     await inngest.send({
       name: "ui/regenerate.frame",
       data: {
@@ -53,6 +52,7 @@ export async function POST(
         frameId: frameId,
         prompt: prompt,
         theme: project.theme,
+        designSystemLocked: project.designSystemLocked,
         frame: frame,
       },
     });
