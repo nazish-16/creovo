@@ -134,25 +134,6 @@ const PromptInput = ({
           className="flex items-center justify-between px-4 pb-4 pt-2 bg-muted/5 border-t border-border/30"
         >
           <div className="flex items-center gap-2">
-            {hasEnhanceToggle && (
-              <button
-                type="button"
-                onClick={onToggleAiEnhance}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold border transition-all duration-300 select-none",
-                  aiEnhance
-                    ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
-                    : "bg-transparent text-muted-foreground border-border/50 hover:border-border hover:bg-muted"
-                )}
-                title="When enabled, your prompt is automatically enhanced"
-              >
-                <div className={cn("size-1.5 rounded-full", aiEnhance ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
-                Enhance with AI
-              </button>
-            )}
-
-            <div className="w-px h-6 bg-border/40 mx-1" />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button

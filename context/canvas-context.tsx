@@ -11,6 +11,14 @@ import {
   useState,
 } from "react";
 
+export const generateObjectId = () => {
+  const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+  const random = Array.from({ length: 16 }, () => 
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('');
+  return timestamp + random;
+};
+
 export type LoadingStatusType =
   | "idle"
   | "running"
@@ -23,13 +31,14 @@ export type LoadingStatusType =
 
 interface CanvasContextType {
   theme?: ThemeType;
-  setTheme: (id: string) => void;
+  setTheme: (id: string, pushToHistory?: boolean) => void;
   themes: ThemeType[];
 
   frames: FrameType[];
-  setFrames: React.Dispatch<React.SetStateAction<FrameType[]>>;
-  updateFrame: (id: string, data: Partial<FrameType>) => void;
-  addFrame: (frame: FrameType) => void;
+  setFrames: (frames: FrameType[] | ((prev: FrameType[]) => FrameType[]), pushToHistory?: boolean) => void;
+  updateFrame: (id: string, data: Partial<FrameType>, pushToHistory?: boolean) => void;
+  addFrame: (frame: FrameType, pushToHistory?: boolean) => void;
+  deleteFrame: (id: string) => void;
 
   selectedFrameId: string | null;
   selectedFrame: FrameType | null;
@@ -49,13 +58,25 @@ interface CanvasContextType {
   setDesignSystemLocked: (locked: boolean) => void;
 
   canvasImages: CanvasImageType[];
-  addCanvasImage: (image: CanvasImageType) => void;
-  updateCanvasImage: (id: string, data: Partial<CanvasImageType>) => void;
+  addCanvasImage: (image: CanvasImageType, pushToHistory?: boolean) => void;
+  updateCanvasImage: (id: string, data: Partial<CanvasImageType>, pushToHistory?: boolean) => void;
   removeCanvasImage: (id: string) => void;
   selectedImageId: string | null;
   setSelectedImageId: (id: string | null) => void;
+
+  // Actions
   copyItem: (type: 'frame' | 'image', data: any) => void;
-  pasteItem: (x: number, y: number) => void;
+  pasteItem: (x?: number, y?: number) => void;
+  duplicateItem: (id: string, type: 'frame' | 'image') => void;
+  bringToFront: (id: string, type: 'frame' | 'image') => void;
+  sendToBack: (id: string, type: 'frame' | 'image') => void;
+  
+  // Undo/Redo
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+
   copiedItem: { type: 'frame' | 'image', data: any } | null;
 }
 
@@ -76,14 +97,95 @@ export const CanvasProvider = ({
   hasInitialData: boolean;
   projectId: string | null;
 }) => {
-  const [themeId, setThemeId] = useState<string>(
+  const [themeId, setThemeIdState] = useState<string>(
     initialThemeId || THEME_LIST[0].id
   );
 
-  const [frames, setFrames] = useState<FrameType[]>(initialFrames);
+  const [frames, setFramesState] = useState<FrameType[]>(initialFrames || []);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [designSystemLocked, setDesignSystemLocked] = useState<boolean>(initialDesignSystemLocked);
+  const [canvasImages, setCanvasImagesState] = useState<CanvasImageType[]>([]);
+
+  // History state
+  const [history, setHistory] = useState<{ frames: FrameType[], images: CanvasImageType[], themeId: string }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Helper to capture current state for history
+  const captureState = useCallback(() => ({
+    frames: JSON.parse(JSON.stringify(frames)),
+    images: JSON.parse(JSON.stringify(canvasImages)),
+    themeId
+  }), [frames, canvasImages, themeId]);
+
+  const pushToHistory = useCallback(() => {
+    const newState = {
+      frames: JSON.parse(JSON.stringify(frames)),
+      images: JSON.parse(JSON.stringify(canvasImages)),
+      themeId
+    };
+    
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(newState);
+      if (newHistory.length > 50) {
+        return newHistory.slice(1);
+      }
+      return newHistory;
+    });
+    setHistoryIndex(prev => {
+      if (prev >= 49) return 49;
+      return prev + 1;
+    });
+  }, [frames, canvasImages, themeId, historyIndex]);
+
+  // Wrap setters to allow pushing to history
+  const setFrames = useCallback((val: FrameType[] | ((prev: FrameType[]) => FrameType[]), push: boolean = false) => {
+    if (push) pushToHistory();
+    setFramesState(val);
+  }, [pushToHistory]);
+
+  const setCanvasImages = useCallback((val: CanvasImageType[] | ((prev: CanvasImageType[]) => CanvasImageType[]), push: boolean = false) => {
+    if (push) pushToHistory();
+    setCanvasImagesState(val);
+  }, [pushToHistory]);
+
+  const setTheme = useCallback((id: string, push: boolean = false) => {
+    if (push) pushToHistory();
+    setThemeIdState(id);
+  }, [pushToHistory]);
+
+  // Initialize history
+  useEffect(() => {
+    if (history.length === 0 && frames.length > 0) {
+      setHistory([{
+        frames: JSON.parse(JSON.stringify(frames)),
+        images: [],
+        themeId: initialThemeId || THEME_LIST[0].id
+      }]);
+      setHistoryIndex(0);
+    }
+  }, [initialFrames, initialThemeId]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setFramesState(JSON.parse(JSON.stringify(prevState.frames)));
+      setCanvasImagesState(JSON.parse(JSON.stringify(prevState.images)));
+      setThemeIdState(prevState.themeId);
+      setHistoryIndex(prev => prev - 1);
+    }
+  }, [historyIndex, history]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setFramesState(JSON.parse(JSON.stringify(nextState.frames)));
+      setCanvasImagesState(JSON.parse(JSON.stringify(nextState.images)));
+      setThemeIdState(nextState.themeId);
+      setHistoryIndex(prev => prev + 1);
+    }
+  }, [historyIndex, history]);
 
   const [framePositions, setFramePositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -106,66 +208,139 @@ export const CanvasProvider = ({
     });
   }, []);
 
-  // Canvas Images State
-  const [canvasImages, setCanvasImages] = useState<CanvasImageType[]>([]);
+  const addCanvasImage = useCallback((image: CanvasImageType, push: boolean = false) => {
+    setCanvasImages(prev => [...prev, image], push);
+  }, [setCanvasImages]);
 
-  const addCanvasImage = useCallback((image: CanvasImageType) => {
-    setCanvasImages(prev => [...prev, image]);
-  }, []);
-
-  const updateCanvasImage = useCallback((id: string, data: Partial<CanvasImageType>) => {
-    setCanvasImages(prev => prev.map(img => img.id === id ? { ...img, ...data } : img));
-  }, []);
+  const updateCanvasImage = useCallback((id: string, data: Partial<CanvasImageType>, push: boolean = false) => {
+    setCanvasImages(prev => prev.map(img => img.id === id ? { ...img, ...data } : img), push);
+  }, [setCanvasImages]);
 
   const removeCanvasImage = useCallback((id: string) => {
-    setCanvasImages(prev => prev.filter(img => img.id !== id));
-  }, []);
+    pushToHistory();
+    setCanvasImagesState(prev => prev.filter(img => img.id !== id));
+    if (selectedImageId === id) setSelectedImageId(null);
+  }, [selectedImageId, pushToHistory]);
+
+  const deleteFrame = useCallback((id: string) => {
+    pushToHistory();
+    setFramesState(prev => prev.filter(f => f.id !== id));
+    if (selectedFrameId === id) setSelectedFrameId(null);
+  }, [selectedFrameId, pushToHistory]);
 
   // Copy/Paste State
   const [copiedItem, setCopiedItem] = useState<{ type: 'frame' | 'image', data: any } | null>(null);
 
   const copyItem = useCallback((type: 'frame' | 'image', data: any) => {
-    setCopiedItem({ type, data });
+    setCopiedItem({ type, data: JSON.parse(JSON.stringify(data)) });
   }, []);
 
-  const pasteItem = useCallback((x: number, y: number) => {
+  const pasteItem = useCallback((x?: number, y?: number) => {
     if (!copiedItem) return;
+
+    pushToHistory();
+    const pasteX = x ?? 400;
+    const pasteY = y ?? 400;
 
     if (copiedItem.type === 'frame') {
       const newFrame = {
         ...copiedItem.data,
-        id: crypto.randomUUID(),
-        initialPosition: { x, y }
+        id: generateObjectId(),
+        initialPosition: { x: pasteX, y: pasteY }
       };
-      setFrames(prev => [...prev, newFrame]);
+      setFramesState(prev => [...prev, newFrame]);
+      setSelectedFrameId(newFrame.id);
     } else if (copiedItem.type === 'image') {
       const newImage = {
         ...copiedItem.data,
-        id: crypto.randomUUID(),
-        x,
-        y
+        id: generateObjectId(),
+        x: pasteX,
+        y: pasteY
       };
-      setCanvasImages(prev => [...prev, newImage]);
+      setCanvasImagesState(prev => [...prev, newImage]);
+      setSelectedImageId(newImage.id);
     }
-  }, [copiedItem]);
+  }, [copiedItem, pushToHistory]);
+
+  const duplicateItem = useCallback((id: string, type: 'frame' | 'image') => {
+    pushToHistory();
+    if (type === 'frame') {
+      const item = frames.find(f => f.id === id);
+      if (item) {
+        const newItem = { 
+          ...item, 
+          id: generateObjectId(),
+          initialPosition: { 
+            x: (framePositions[id]?.x ?? 0) + 20, 
+            y: (framePositions[id]?.y ?? 0) + 20 
+          }
+        };
+        setFramesState(prev => [...prev, newItem]);
+        setSelectedFrameId(newItem.id);
+      }
+    } else {
+      const item = canvasImages.find(i => i.id === id);
+      if (item) {
+        const newItem = { ...item, id: generateObjectId(), x: item.x + 20, y: item.y + 20 };
+        setCanvasImagesState(prev => [...prev, newItem]);
+        setSelectedImageId(newItem.id);
+      }
+    }
+  }, [frames, canvasImages, framePositions, pushToHistory]);
+
+  const bringToFront = useCallback((id: string, type: 'frame' | 'image') => {
+    pushToHistory();
+    if (type === 'frame') {
+      setFramesState(prev => {
+        const item = prev.find(f => f.id === id);
+        if (!item) return prev;
+        return [...prev.filter(f => f.id !== id), item];
+      });
+    } else {
+      setCanvasImagesState(prev => {
+        const item = prev.find(i => i.id === id);
+        if (!item) return prev;
+        return [...prev.filter(i => i.id !== id), item];
+      });
+    }
+  }, [pushToHistory]);
+
+  const sendToBack = useCallback((id: string, type: 'frame' | 'image') => {
+    pushToHistory();
+    if (type === 'frame') {
+      setFramesState(prev => {
+        const item = prev.find(f => f.id === id);
+        if (!item) return prev;
+        return [item, ...prev.filter(f => f.id !== id)];
+      });
+    } else {
+      setCanvasImagesState(prev => {
+        const item = prev.find(i => i.id === id);
+        if (!item) return prev;
+        return [item, ...prev.filter(i => i.id !== id)];
+      });
+    }
+  }, [pushToHistory]);
 
   const [prevProjectId, setPrevProjectId] = useState(projectId);
   if (projectId !== prevProjectId) {
     setPrevProjectId(projectId);
     setLoadingStatus(hasInitialData ? "idle" : "running");
-    setFrames(initialFrames);
+    setFramesState(initialFrames || []);
     setFramePositions({});
-    setThemeId(initialThemeId || THEME_LIST[0].id);
+    setThemeIdState(initialThemeId || THEME_LIST[0].id);
     setDesignSystemLocked(initialDesignSystemLocked);
     setSelectedFrameId(null);
     setSelectedImageId(null);
     setCritiqueResults({});
-    setCanvasImages([]); // Reset images on project change
+    setCanvasImagesState([]); // Reset images on project change
+    setHistory([]);
+    setHistoryIndex(-1);
   }
 
   const theme = THEME_LIST.find((t) => t.id === themeId);
   const selectedFrame =
-    selectedFrameId && frames.length !== 0
+    selectedFrameId && (frames?.length ?? 0) !== 0
       ? frames.find((f) => f.id === selectedFrameId) || null
       : null;
 
@@ -204,7 +379,7 @@ export const CanvasProvider = ({
           break;
         case "analysis.complete":
           setLoadingStatus("generating");
-          if (data.theme) setThemeId(data.theme);
+          if (data.theme) setTheme(data.theme);
 
           if (data.screens && data.screens.length > 0) {
             const skeletonFrames: FrameType[] = data.screens.map((s: any) => ({
@@ -213,12 +388,12 @@ export const CanvasProvider = ({
               htmlContent: "",
               isLoading: true,
             }));
-            setFrames((prev) => [...prev, ...skeletonFrames]);
+            setFramesState((prev) => [...prev, ...skeletonFrames]);
           }
           break;
         case "frame.created":
           if (data.frame) {
-            setFrames((prev) => {
+            setFramesState((prev) => {
               const newFrames = [...prev];
               const idx = newFrames.findIndex((f) => f.id === data.screenId);
               if (idx !== -1) newFrames[idx] = data.frame;
@@ -239,24 +414,22 @@ export const CanvasProvider = ({
     });
   }, [projectId, freshData, setCritiqueResult]);
 
-  const addFrame = useCallback((frame: FrameType) => {
-    setFrames((prev) => [...prev, frame]);
-  }, []);
+  const addFrame = useCallback((frame: FrameType, push: boolean = false) => {
+    setFrames(prev => [...prev, frame], push);
+  }, [setFrames]);
 
-  const updateFrame = useCallback((id: string, data: Partial<FrameType>) => {
-    setFrames((prev) => {
-      return prev.map((frame) =>
+  const updateFrame = useCallback((id: string, data: Partial<FrameType>, push: boolean = false) => {
+    setFrames(prev => prev.map((frame) =>
         frame.id === id ? { ...frame, ...data } : frame
-      );
-    });
-  }, []);
+      ), push);
+  }, [setFrames]);
 
 
   return (
     <CanvasContext.Provider
       value={{
         theme,
-        setTheme: setThemeId,
+        setTheme,
         themes: THEME_LIST,
         frames,
         setFrames,
@@ -265,6 +438,7 @@ export const CanvasProvider = ({
         setSelectedFrameId,
         updateFrame,
         addFrame,
+        deleteFrame,
         loadingStatus,
         setLoadingStatus,
         framePositions,
@@ -281,6 +455,13 @@ export const CanvasProvider = ({
         setSelectedImageId,
         copyItem,
         pasteItem,
+        duplicateItem,
+        bringToFront,
+        sendToBack,
+        undo,
+        redo,
+        canUndo: historyIndex > 0,
+        canRedo: historyIndex < history.length - 1,
         copiedItem,
       }}
     >

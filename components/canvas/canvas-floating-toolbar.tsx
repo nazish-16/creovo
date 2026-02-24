@@ -1,7 +1,7 @@
 "use client";
 
 import { CameraIcon, ChevronDown, Palette, Save, Wand2, Lock, LockOpen, ImageIcon } from "lucide-react";
-import { useCanvas } from "@/context/canvas-context";
+import { useCanvas, generateObjectId } from "@/context/canvas-context";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import PromptInput from "../prompt-input";
@@ -82,7 +82,7 @@ const CanvasFloatingToolbar = ({
     reader.onload = (event) => {
       const url = event.target?.result as string;
       addCanvasImage({
-        id: crypto.randomUUID(),
+        id: generateObjectId(),
         url,
         x: 150, // Default position
         y: 150,

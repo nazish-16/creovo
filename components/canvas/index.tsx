@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { LoadingStatusType, useCanvas } from "@/context/canvas-context";
+import { LoadingStatusType, useCanvas, generateObjectId } from "@/context/canvas-context";
 import { cn } from "@/lib/utils";
 import { Spinner } from "../ui/spinner";
 import CanvasFloatingToolbar from "./canvas-floating-toolbar";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import PropertiesPanel from "./properties-panel";
 import { Rnd } from "react-rnd";
 import { Trash2 } from "lucide-react";
+import { useDeleteFrame } from "@/features/use-frame";
 
 const Canvas = ({
   projectId,
@@ -29,6 +30,7 @@ const Canvas = ({
     frames,
     updateFrame,
     addFrame,
+    deleteFrame,
     updateFramePosition,
     selectedFrameId,
     selectedFrame,
@@ -36,8 +38,19 @@ const Canvas = ({
     loadingStatus,
     setLoadingStatus,
     canvasImages,
+    addCanvasImage,
     updateCanvasImage,
     removeCanvasImage,
+    selectedImageId,
+    setSelectedImageId,
+    undo,
+    redo,
+    copyItem,
+    pasteItem,
+    duplicateItem,
+    bringToFront,
+    sendToBack,
+    copiedItem
   } = useCanvas();
 
   const [toolMode, setToolMode] = useState<ToolModeType>(TOOL_MODE_ENUM.SELECT);
@@ -53,6 +66,129 @@ const Canvas = ({
   const canvasRootRef = useRef<HTMLDivElement>(null);
 
   const [transformState, setTransformState] = useState({ scale: 0.53, positionX: 40, positionY: 5 });
+
+  const deleteMutation = useDeleteFrame(projectId);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or textarea
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        (document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      const isMod = e.ctrlKey || e.metaKey;
+      const isShift = e.shiftKey;
+
+      // Undo/Redo
+      if (isMod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (isShift) redo();
+        else undo();
+      }
+      if (isMod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+      }
+
+      // Delete
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedFrameId) {
+          deleteMutation.mutate(selectedFrameId, {
+            onSuccess: () => {
+              deleteFrame(selectedFrameId);
+            }
+          });
+        } else if (selectedImageId) {
+          removeCanvasImage(selectedImageId);
+          toast.success("Image deleted");
+        }
+      }
+
+      // Copy/Paste/Duplicate
+      if (isMod && e.key.toLowerCase() === "c") {
+        if (selectedFrameId) {
+          const frame = frames.find(f => f.id === selectedFrameId);
+          if (frame) {
+            copyItem('frame', frame);
+            toast.success("Frame copied");
+          }
+        } else if (selectedImageId) {
+          const image = canvasImages.find(i => i.id === selectedImageId);
+          if (image) {
+            copyItem('image', image);
+            toast.success("Image copied");
+          }
+        }
+      }
+
+      if (isMod && e.key.toLowerCase() === "v") {
+        if (copiedItem) {
+          pasteItem();
+          toast.success("Item pasted");
+        }
+      }
+
+      if (isMod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (selectedFrameId) duplicateItem(selectedFrameId, 'frame');
+        else if (selectedImageId) duplicateItem(selectedImageId, 'image');
+      }
+
+      // Layering
+      if (e.key === "]") {
+        if (selectedFrameId) bringToFront(selectedFrameId, 'frame');
+        else if (selectedImageId) bringToFront(selectedImageId, 'image');
+      }
+      if (e.key === "[") {
+        if (selectedFrameId) sendToBack(selectedFrameId, 'frame');
+        else if (selectedImageId) sendToBack(selectedImageId, 'image');
+      }
+
+      // New Items
+      if (isMod && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        const newFrame = {
+          id: generateObjectId(),
+          title: "New Frame",
+          htmlContent: '<div class="p-4">New Frame Content</div>',
+          initialPosition: { x: 400, y: 400 }
+        };
+        addFrame(newFrame, true);
+        setSelectedFrameId(newFrame.id);
+        toast.success("New frame added");
+      }
+
+      if (isMod && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        const newImage = {
+          id: generateObjectId(),
+          url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
+          x: 450,
+          y: 450,
+          width: 300,
+          height: 200
+        };
+        addCanvasImage(newImage, true);
+        setSelectedImageId(newImage.id);
+        toast.success("Image inserted");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    undo, redo, deleteFrame, removeCanvasImage, 
+    selectedFrameId, selectedImageId, 
+    copyItem, pasteItem, duplicateItem, 
+    bringToFront, sendToBack, 
+    frames, canvasImages, copiedItem,
+    addFrame, addCanvasImage, setSelectedFrameId, setSelectedImageId
+  ]);
 
   // Handle messages from frames (existing logic)
   useEffect(() => {
@@ -99,6 +235,7 @@ const Canvas = ({
         const result = getCanvasHtmlContent();
         if (!result?.html) return null;
         setSelectedFrameId(null);
+        setSelectedImageId(null);
         setIsSaving(true);
         const response = await axios.post("/api/screenshot", {
           html: result.html,
@@ -115,7 +252,7 @@ const Canvas = ({
         setIsSaving(false);
       }
     },
-    [setSelectedFrameId]
+    [setSelectedFrameId, setSelectedImageId]
   );
 
   useEffect(() => {
@@ -164,6 +301,7 @@ const Canvas = ({
         toast.error("Failed to get canvas content");
         return null;
       }
+      console.log("Starting canvas screenshot...");
       setSelectedFrameId(null);
       setIsScreenshotting(true);
 
@@ -176,21 +314,38 @@ const Canvas = ({
         },
         {
           responseType: "blob",
+          timeout: 60000, // 60s timeout
           validateStatus: (s) => (s >= 200 && s < 300) || s === 304,
         }
       );
+      
+      console.log("Screenshot response received", response.status);
       const title = projectName || "Canvas";
       const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${title.replace(/\s+/g, "-").toLowerCase()}
-      -${Date.now()}.png`;
+      link.download = `${title.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.png`;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success("Screenshot downloaded");
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to screenshot canvs");
+      toast.success("Screenshot downloaded successfully");
+    } catch (error: any) {
+      console.error("Canvas screenshot failed:", error);
+      
+      // If the error response is a blob, we need to read it to see the error message
+      if (error.response?.data instanceof Blob && error.response.data.type === "application/json") {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const errorData = JSON.parse(reader.result as string);
+            toast.error(`Screenshot failed: ${errorData.details || errorData.error}`);
+          } catch {
+            toast.error("Failed to capture screenshot");
+          }
+        };
+        reader.readAsText(error.response.data);
+      } else {
+        toast.error(error.message || "Failed to screenshot canvas");
+      }
     } finally {
       setIsScreenshotting(false);
     }
