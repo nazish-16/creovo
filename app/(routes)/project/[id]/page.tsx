@@ -11,28 +11,29 @@ const Page = () => {
   const id = params.id as string;
 
   const { data: project, isPending } = useGetProjectById(id);
-
-  const hasInitialData = project?.frames.length > 0;
+  
+  const frames = project?.frames || [];
+  const hasInitialData = frames.length > 0;
 
   if (!isPending && !project) {
     return <div>Project not found</div>;
   }
 
   return (
-    <div
-      className="relative h-screen w-full
-   flex flex-col
-  "
+    <CanvasProvider
+      initialFrames={frames}
+      initialThemeId={project?.theme}
+      initialDesignSystemLocked={project?.designSystemLocked}
+      hasInitialData={hasInitialData}
+      projectId={project?.id || null}
     >
-      <Header projectName={project?.name} />
-
-      <CanvasProvider
-        initialFrames={project?.frames}
-        initialThemeId={project?.theme}
-        initialDesignSystemLocked={project?.designSystemLocked}
-        hasInitialData={hasInitialData}
-        projectId={project?.id}
+      <div
+        className="relative h-screen w-full
+    flex flex-col
+   "
       >
+        <Header projectName={project?.name} />
+
         <div className="flex flex-1 overflow-hidden">
           <div className="relative flex-1">
             <Canvas
@@ -42,8 +43,8 @@ const Page = () => {
             />
           </div>
         </div>
-      </CanvasProvider>
-    </div>
+      </div>
+    </CanvasProvider>
   );
 };
 

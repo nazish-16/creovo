@@ -271,14 +271,17 @@ const DeviceFrame = ({
         }
       }}
       className={cn(
-        "relative z-10",
+        "relative z-20 transition-all duration-300",
         isSelected &&
           toolMode !== TOOL_MODE_ENUM.HAND &&
-          "ring-2 ring-blue-500 ring-offset-4 rounded-[42px]",
+          "ring-1 ring-black/40 dark:ring-white/40 shadow-2xl",
         toolMode === TOOL_MODE_ENUM.HAND
           ? "cursor-grab! active:cursor-grabbing!"
           : "cursor-move"
       )}
+      style={{
+        borderRadius: `${activePreset.radius}px`,
+      }}
     >
       <div className="w-full h-full flex flex-col items-center group/frame">
         <DeviceFrameToolbar
@@ -309,7 +312,7 @@ const DeviceFrame = ({
         <div
           className={cn(
             "relative w-full h-full bg-black overflow-hidden shadow-2xl transition-all duration-300",
-            "border-[8px] border-gray-900"
+            "border-[8px] border-zinc-950"
           )}
           style={{
             borderRadius: `${activePreset.radius}px`,

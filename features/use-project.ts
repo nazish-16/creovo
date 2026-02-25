@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 export const useCreateProject = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ prompt, images }: { prompt: string; images?: string[] }) =>
       await axios
@@ -14,6 +15,8 @@ export const useCreateProject = () => {
         })
         .then((res) => res.data),
     onSuccess: (data) => {
+      toast.success("Project created successfully");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       router.push(`/project/${data.data.id}`);
     },
     onError: (error) => {

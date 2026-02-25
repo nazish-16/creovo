@@ -20,6 +20,8 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
 
+import ProjectTabs from "@/components/project-tabs";
+
 const Header = ({ projectName }: { projectName?: string }) => {
   const router = useRouter();
   const params = useParams();
@@ -34,10 +36,10 @@ const Header = ({ projectName }: { projectName?: string }) => {
   };
 
   return (
-    <div className="sticky top-0 z-50">
-      <header className="h-14 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="flex h-full items-center justify-between px-4">
-          <div className="flex items-center gap-3 min-w-0">
+    <div className="sticky top-0 z-50 w-full">
+      <header className="h-12 border-b border-border/50 bg-background/80 backdrop-blur-md">
+        <div className="flex h-full items-center justify-between px-4 gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Logo />
             <span className="text-border/80 select-none hidden sm:inline">·</span>
             <Button
@@ -49,14 +51,11 @@ const Header = ({ projectName }: { projectName?: string }) => {
             >
               <ArrowLeftIcon className="size-4" />
             </Button>
-            {projectName && (
-              <p className="max-w-[160px] sm:max-w-[260px] truncate text-sm font-medium text-foreground/80">
-                {projectName}
-              </p>
-            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <ProjectTabs projectName={projectName} />
+
+          <div className="flex items-center gap-2 shrink-0">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button

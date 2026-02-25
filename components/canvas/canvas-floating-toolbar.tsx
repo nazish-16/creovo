@@ -98,7 +98,7 @@ const CanvasFloatingToolbar = ({
   return (
     <div
       className="
-   fixed top-[72px] md:top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300
+   fixed top-[72px] md:top-15 left-1/2 -translate-x-1/2 z-50 transition-all duration-300
   "
     >
       <div
