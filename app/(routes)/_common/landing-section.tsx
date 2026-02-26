@@ -137,7 +137,7 @@ const LandingSection = () => {
                 <span className="text-primary">in minutes</span>
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                Describe your idea. Creovo generates production-quality mobile UI mockups instantly using Creovo.
+                Describe your idea. Creovo generates production-quality mobile UI mockups in an instant.
               </p>
             </div>
 
