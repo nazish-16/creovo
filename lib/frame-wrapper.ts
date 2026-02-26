@@ -20,21 +20,34 @@ export function getHTMLWrapper(
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style type="text/tailwindcss">
     :root {${BASE_VARIABLES}${finalTheme}}
     *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
-    html, body {width:100%;min-height:100%;}
+    html, body {width:100%; height:100%; overflow:hidden;}
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background:var(--background);
       color:var(--foreground);
       -webkit-font-smoothing:antialiased;
-      /* Default mobile safe area */
-      padding-top: env(safe-area-inset-top, 20px);
     }
-    #root {width:100%;min-height:100vh;}
-    * {scrollbar-width:none;-ms-overflow-style:none;}
-    *::-webkit-scrollbar {display:none;}
+    #root {width:100%; height:100%;}
+    
+    /* Plain White Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+    }
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.8) transparent;
+    }
 
     .font-heading { font-family: 'Space Grotesk', sans-serif !important; }
     .font-serif { font-family: 'Playfair Display', serif !important; }
@@ -86,7 +99,7 @@ export function getHTMLWrapper(
 </head>
 <body>
   <div id="root">
-    <div class="relative min-h-screen no-scrollbar">
+    <div class="relative h-full">
       ${html}
     </div>
   </div>

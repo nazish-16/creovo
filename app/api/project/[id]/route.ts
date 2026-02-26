@@ -103,7 +103,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { themeId, designSystemLocked } = await request.json();
+    const { themeId, designSystemLocked, name } = await request.json();
     const session = await getKindeServerSession();
     const user = await session.getUser();
 
@@ -116,6 +116,7 @@ export async function PATCH(
       data: {
         ...(themeId && { theme: themeId }),
         ...(designSystemLocked !== undefined && { designSystemLocked }),
+        ...(name && { name }),
       },
     });
 

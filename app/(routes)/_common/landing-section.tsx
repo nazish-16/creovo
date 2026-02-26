@@ -4,13 +4,13 @@ import { formatDistanceToNow } from "date-fns";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import PromptInput from "@/components/prompt-input";
 import Header from "./header";
-import { useCreateProject, useGetProjects, useDeleteProject } from "@/features/use-project";
+import { useCreateProject, useGetProjects, useDeleteProject, useUpdateProject } from "@/features/use-project";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { Spinner } from "@/components/ui/spinner";
 import { ProjectType } from "@/types/project";
 import { useRouter } from "next/navigation";
 import InteractiveBubbles from "@/components/bg/interactive-bubbles";
-import { FolderOpenDotIcon, Trash2Icon, AlertCircleIcon, ArrowRight } from "lucide-react";
+import { FolderOpenDotIcon, Trash2Icon, AlertCircleIcon, ArrowRight, PencilIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -225,12 +225,27 @@ const EmptyProjectsState = () => (
 const ProjectCard = memo(({ project }: { project: ProjectType }) => {
   const router = useRouter();
   const deleteMutation = useDeleteProject();
+  const updateMutation = useUpdateProject();
   const createdAtDate = new Date(project.createdAt);
   const timeAgo = formatDistanceToNow(createdAtDate, { addSuffix: true });
   const thumbnail = project.thumbnail || null;
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(project.name);
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+
   const onRoute = () => {
-    router.push(`/project/${project.id}`);
+    if (!isEditing) {
+      router.push(`/project/${project.id}`);
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -240,6 +255,28 @@ const ProjectCard = memo(({ project }: { project: ProjectType }) => {
   const confirmDelete = () => {
     deleteMutation.mutate(project.id);
   };
+
+  const handleEditSubmit = (e?: React.FocusEvent | React.KeyboardEvent | React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (editName.trim() && editName !== project.name) {
+      updateMutation.mutate({ id: project.id, name: editName.trim() });
+    } else {
+      setEditName(project.name);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleEditSubmit(e);
+    } else if (e.key === "Escape") {
+      setEditName(project.name);
+      setIsEditing(false);
+    }
+  };
+
 
   return (
     <div
@@ -260,21 +297,34 @@ const ProjectCard = memo(({ project }: { project: ProjectType }) => {
           </div>
         )}
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="absolute top-2 right-2 p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
-              title="Delete project"
-            >
-              {deleteMutation.isPending ? (
-                <Spinner className="size-3" />
-              ) : (
-                <Trash2Icon className="size-3.5" />
-              )}
-            </button>
-          </AlertDialogTrigger>
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditName(project.name);
+              setIsEditing(true);
+            }}
+            className="p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+            title="Edit project name"
+          >
+            <PencilIcon className="size-3.5" />
+          </button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="p-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                title="Delete project"
+              >
+                {deleteMutation.isPending ? (
+                  <Spinner className="size-3" />
+                ) : (
+                  <Trash2Icon className="size-3.5" />
+                )}
+              </button>
+            </AlertDialogTrigger>
           <AlertDialogContent className="rounded-2xl border-destructive/20 shadow-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-xl font-bold">
@@ -298,11 +348,32 @@ const ProjectCard = memo(({ project }: { project: ProjectType }) => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      </div>
 
       <div className="p-3.5 flex flex-col gap-0.5">
-        <h3 className="font-semibold text-sm truncate w-full text-card-foreground">
-          {project.name}
-        </h3>
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            className="font-semibold text-sm w-full bg-transparent border-b border-primary outline-none focus:ring-0 px-0 h-5"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleEditSubmit}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <h3 
+            className="font-semibold text-sm truncate w-full text-card-foreground hover:text-primary transition-colors"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            title="Double-click to rename"
+          >
+            {project.name}
+          </h3>
+        )}
         <p className="text-xs text-muted-foreground">{timeAgo}</p>
       </div>
     </div>

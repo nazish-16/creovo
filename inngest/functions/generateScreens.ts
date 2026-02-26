@@ -159,21 +159,19 @@ export const generateScreens = inngest.createFunction(
 
       await step.run(`generated-screen-${i}`, async () => {
         const genPrompt = `
-            - Screen ${i + 1}/${analysis.screens.length}
-            - Screen ID: ${screenPlan.id}
-            - Screen Name: ${screenPlan.name}
-            - Screen Purpose: ${screenPlan.purpose}
-            VISUAL DESCRIPTION: ${screenPlan.visualDescription}
-            EXISTING SCREENS REFERENCE: ${previousFramesContext || "No previous screens"}
-            THEME VARIABLES: ${fullThemeCSS}
-            ${designSystemLocked ? "STRICT DESIGN SYSTEM LOCK ACTIVE: You MUST use the provided THEME VARIABLES for all colors, spacing, and typography. Do NOT introduce any new colors or utility classes that deviate from the design system." : ""}
+        SCREEN CONTEXT:
+        - Screen ${i + 1}/${analysis.screens.length}: ${screenPlan.name}
+        - ID: ${screenPlan.id}
+        - Purpose: ${screenPlan.purpose}
+        - Visual Directive: ${screenPlan.visualDescription}
 
-          1. **Generate raw HTML using Tailwind CSS.**
-          2. **Use placeholder images:**
-            - Profile: https://avatar.iran.liara.run/public
-            - Banner: https://picsum.photos/seed/${screenPlan.id}/800/400
-          3. **Output raw HTML only, starting with <div>.**
-        `.trim();
+        TECHNICAL REQUIREMENTS:
+        - Use THEME VARIABLES: ${fullThemeCSS}
+        - Map Lucide icons correctly.
+        - Ensure real, jittered data for any Chart.js components.
+        - Follow ScreenShell layout strictly.
+        ${designSystemLocked ? "STRICT DESIGN SYSTEM LOCK: USE PROVIDED THEME VARIABLES ONLY." : ""}
+      `.trim();
 
         const imageParts = event.data.images?.map((img: string) => ({
           type: "image",
@@ -197,9 +195,13 @@ export const generateScreens = inngest.createFunction(
         });
 
         let finalHtml = result.text ?? "";
-        const match = finalHtml.match(/<div[\s\S]*<\/div>/);
-        finalHtml = match ? match[0] : finalHtml;
         finalHtml = finalHtml.replace(/```(html)?/g, "").replace(/```/g, "").trim();
+
+        const startIdx = finalHtml.indexOf("<div");
+        if (startIdx !== -1) {
+          finalHtml = finalHtml.substring(startIdx);
+        }
+
 
         const frame = await prisma.frame.create({
           data: {

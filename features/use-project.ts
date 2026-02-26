@@ -53,3 +53,21 @@ export const useDeleteProject = () => {
     },
   });
 };
+
+export const useUpdateProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const res = await axios.patch(`/api/project/${id}`, { name });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Project updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
+    },
+    onError: () => {
+      toast.error("Failed to update project");
+    },
+  });
+};
