@@ -109,11 +109,11 @@ const PromptInput = ({
           className
         )}
       >
-        <div className="relative flex-1 flex flex-col min-h-0">
+        <div className="relative flex-1 flex flex-col min-h-0 w-full min-w-0">
           <InputGroupTextarea
             className={cn(
               "text-base! py-6! px-6! placeholder:text-muted-foreground/40 flex-1 min-h-0 border-none focus-visible:ring-0 resize-none align-top leading-relaxed text-left!",
-              "!h-full !items-start !justify-start !text-left"
+              "!h-full !items-start !justify-start !text-left break-all overflow-x-hidden"
             )}
             placeholder="I want to design an app that..."
             value={promptText}
